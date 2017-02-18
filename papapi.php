@@ -1,4 +1,6 @@
 <?php
+namespace Aapapi;
+
 use ApaiIO\ApaiIO;
 use ApaiIO\Configuration\GenericConfiguration;
 use ApaiIO\Operations\Lookup;
