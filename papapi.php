@@ -7,6 +7,9 @@ use ApaiIO\Operations\Lookup;
 use ApaiIO\Request\GuzzleRequest;
 use GuzzleHttp\Client;
 
+const RETRY_COUNT = 5;
+const RETRY_SLEEP_SEC = 10;
+
 class Aapapi {
     protected $config = null;
     protected $client = null;
@@ -32,21 +35,28 @@ class Aapapi {
             return null;
         }
 
-        try {
-            $results = null;
-            $apaiIO = new ApaiIO($this->config);
-            $lookup = new Lookup();
+        $apaiIO = new ApaiIO($this->config);
+        $lookup = new Lookup();
+        $results = null;
 
-            $lookup->setItemId($asin);
-            $lookup->setResponseGroup(['ItemAttributes', 'Images']);
-            $formattedResponse = $apaiIO->runOperation($lookup);
-            $results = simplexml_load_string( $formattedResponse );
+        for ($i = 0 ; $i < RETRY_COUNT; $i++) {
+            try {
+                $lookup->setItemId($asin);
+                $lookup->setResponseGroup(['ItemAttributes', 'Images']);
+                $formattedResponse = $apaiIO->runOperation($lookup);
+                $results = simplexml_load_string($formattedResponse);
 
-            return $results->Items->Item;
-        } catch (Exception $e) {
-            return null;
+                if ($results->Items->Request->IsValid) {
+                    $results = $results->Items->Item;
+                }
+
+                break;
+            } catch (Exception $e) {
+                sleep(RETRY_SLEEP_SEC);
+            }
         }
 
+        return $results;
     }
 
     private function get_country() {
